@@ -1,0 +1,22 @@
+# Generic detritus
+*~
+*.log
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.python-version
+venv
+
+# project-specific files
+secrets.py
+bins
+T-Display-S3
+CIRCUITPY

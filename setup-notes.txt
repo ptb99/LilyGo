@@ -1,0 +1,30 @@
+esptool.py -p /dev/ttyACM0 write_flash 0x0 ~tom/Downloads/tinyuf2-lilygo_tdisplay_s3-0.35.0-combined.bin
+mount /dev/sda1 /mnt/
+cp ~tom/Downloads/adafruit-circuitpython-lilygo_tdisplay_s3-en_US-9.2.8.uf2 /mnt/
+sync && umount /mnt
+
+fatlabel /dev/sda1 CIRCUITPY
+dosfsck /dev/sda1
+
+cp ../Feather/secrets.py CIRCUITPY/
+mkdir CIRCUITPY/fonts
+cp fonts/NimbusSansNarrow-Regular-60.pcf CIRCUITPY/fonts/
+cp fonts/NimbusSansNarrow-Regular-40.pcf CIRCUITPY/fonts/
+cp fonts/NimbusSansNarrow-Regular-8.pcf CIRCUITPY/fonts/
+
+# ( source venv/bin/activate.csh && circup install adafruit_logging )
+# ( source venv/bin/activate.csh && circup install adafruit_ntp )
+# ( source venv/bin/activate.csh && circup install adafruit_minimqtt )
+# ( source venv/bin/activate.csh && circup install adafruit_io )
+# ( source venv/bin/activate.csh && circup install adafruit_sht4x )
+# ( source venv/bin/activate.csh && circup install adafruit_bitmap_font )
+# ( source venv/bin/activate.csh && circup install adafruit_display_text )
+# ( source venv/bin/activate.csh && circup install adafruit_display_shapes )
+
+uv run circup install adafruit_logging
+                      ...
+# Is there a way to do multiple modules from a requirements.txt?
+# I suppose that circup update will work after modules installed once...
+
+
+cp display-temp.py CIRCUITPY/code.py
