@@ -9,9 +9,11 @@ import adafruit_logging as logging
 import traceback
 
 import wifi
-import ssl
+#import ssl
 import socketpool
 
+import adafruit_connection_manager
+import adafruit_requests
 import adafruit_ntp
 import adafruit_minimqtt.adafruit_minimqtt as MQTT
 from adafruit_io.adafruit_io import IO_MQTT
@@ -29,18 +31,34 @@ from adafruit_display_text.bitmap_label import Label
 ## config knobs;
 DEBUG = False
 #DEBUG = True
-TZ_OFFSET = -7 # for PDT
+
+TZ_OFFSET = 0 ## use AF service to get offset
+#TZ_OFFSET = -7 # for PDT
 #TZ_OFFSET = -8 # for PST
+
 # with display of min (and not secs), only need to check NTP clock every 10 sec
 UPDATE_INTERVAL = 10
 # diff interval for publish to AdafruitIO
 PUBLISH_INTERVAL = 60
+
+## UI buttons
+BUTTON_UP = board.IO14
+BUTTON_DOWN = board.IO0
+# button_a = digitalio.DigitalInOut(board.BUTTON_A)
+# button_a.direction = digitalio.Direction.INPUT
+# button_a.pull = digitalio.Pull.DOWN
+## is this micropython?
+# self.left = machine.Pin(0, Pin.IN)
+# self.right = machine.Pin(14, Pin.IN)
+#BACKLIGHT = Pin(38, Pin.OUT)
 
 #CLOCK_FONT =  "fonts/FreeSans-60.pcf"
 CLOCK_FONT = 'fonts/NimbusSansNarrow-Regular-60.pcf'
 #LARGE_FONT =  "fonts/DejaVuSans-Bold24.pcf"
 #MEDIUM_FONT =  "fonts/FreeSans-40.pcf"
 MEDIUM_FONT = 'fonts/NimbusSansNarrow-Regular-40.pcf'
+SMALL_FONT = 'fonts/NimbusSansNarrow-Regular-8.pcf'
+
 FGCOLOR = 0x00ebf2              # cyan-ish
 BGCOLOR = 0x1e0028              # dark purple
 
@@ -99,8 +117,10 @@ class graphic_display:
 
         self.clock_font = bitmap_font.load_font(CLOCK_FONT)
         self.temp_font = bitmap_font.load_font(MEDIUM_FONT)
+        self.status_font = bitmap_font.load_font(SMALL_FONT)
         self._time_str = '00:00:00'
         self._temp_str = '00.0 F'
+        self._status_str = ""
 
     def update_time(self, now):
         """Set the current time to the timespec passed as NOW"""
@@ -129,16 +149,28 @@ class graphic_display:
         self.clock_area.text = self._time_str
 
     def update_temp(self, sensor):
-        #print(temperature)
-        #Alt:  deg = '\u00B0'
+        deg = '\u00B0'
         if self.celsius:
-            self._temp_str = "%.1f°C" % sensor.get_temp_C()
+            temp = sensor.get_temp_C()
+            temp_label = 'C'
         else:
-            self._temp_str = "%.1f°F" % sensor.get_temp_F()
+            temp = sensor.get_temp_F()
+            temp_label = 'F'
+        self._temp_str = f'{temp:.1f}{deg}{temp_label}'
+        self.temp_area.text = self._temp_str
         self.logger.debug(f'update_temp() sets temp_str={self._temp_str}')
  
-        self.temp_area.text = self._temp_str
- 
+    def update_errstatus(self, e):
+        if e is None:
+            self._status_str = ""
+            self._status_val = True
+        else:
+            self._lasterr = str(e)
+            self._status_val = False
+        ## more stuff here...
+        self.status_area.text = self._status_str
+        self.logger.debug(f'update_errstatus() sets status_str={self._status_str}')
+
     def get_display_group(self, display_width, display_height):
         if not self.display_group:
             # First time through, create a group for all the labels
@@ -175,6 +207,16 @@ class graphic_display:
 
             bg_group.append(self.temp_area)
 
+            # Last exception display
+            self.status_area = Label(self.status_font,
+                                     text=self._status_str,
+                                     color=FGCOLOR)
+            self.status_area.x = 30
+            self.status_area.y = 140
+
+            # self.status_dot = circle filled with red/green/etc ...
+            bg_group.append(self.status_area)
+
             # store our result here
             self.display_group = bg_group
 
@@ -182,6 +224,7 @@ class graphic_display:
             # don't create a new group, just update the labels
             self.clock_area.text = self._time_str
             self.temp_area.text = self._temp_str
+            self.status_area.text = self._status_str
             self.logger.info(
                 'get_display_group() unexpectedly called after init'
             )
@@ -215,6 +258,19 @@ class network_handles:
 
         # Create a socket pool
         self.pool = socketpool.SocketPool(wifi.radio)
+        self.ssl_context = adafruit_connection_manager.get_radio_ssl_context(wifi.radio)
+
+        # get DST-adjusted offset from Adafruit service
+        if tz_offset == 0:
+            requests = adafruit_requests.Session(self.pool, self.ssl_context)
+            url = f'https://io.adafruit.com/api/v2/{secrets["aio_username"]}/' + \
+                  f'integrations/time/strftime?x-aio-key={secrets["aio_key"]}&fmt=%25z'
+            with requests.get(url) as response:
+                self.logger.info(f"strftime call returned: {response.status_code}")
+                # check status_code == 200??
+                val = int(response.text)/100
+                self.logger.info(f"tz_offset: {response.text} ->  {val}")
+                tz_offset = val
 
         # NTP handle
         self.ntp = adafruit_ntp.NTP(self.pool, 
@@ -231,7 +287,7 @@ class network_handles:
             password=secrets["aio_key"],
             is_ssl=True,
             socket_pool=self.pool,
-            ssl_context=ssl.create_default_context(),
+            ssl_context=self.ssl_context,
             keep_alive=120, #? - want this longer than 1min update intvl?
             connect_retries=7, # default = 5
         )
@@ -295,6 +351,8 @@ def main():
                 af_io.publish_multiple(values)
                 logger.info(f'publ to AdafruitIO val= {values}')
                 next_publish = current_time + PUBLISH_INTERVAL
+                # if publish succeeds, then clear any prev exceptions
+                graphic.update_errstatus(None)
 
             display.refresh()
 
@@ -302,20 +360,23 @@ def main():
             # NTP error
             logger.error('OSError: %s', e)
             traceback.print_exception(e)
+            graphic.update_errstatus(e)
             # prob a timeout to NTP server, just try again
 
-        except MQTT.MMQTTException as e:
+        except MQTT.MQTTException as e:
             ## apparently, protocol exceptions happen fairly frequently
             logger.error('MQTT exception: %s', e)
-            ## swallow this exception and try another round at main()
+            graphic.update_errstatus(e)
             # Maybe need these?
-            #wifi.reset()
-            #wifi.connect()
+            # if not wifi.radio.connected:
+            #     wifi.reset()
+            #     wifi.connect()
             af_io.reconnect()
 
         except AdafruitIO_MQTTError as e:
             ## apparently, protocol exceptions happen fairly frequently
             logger.error('MQTT exception: %s', e)
+            graphic.update_errstatus(e)
             ## swallow this exception and try another round at main()
             # Maybe need these?
             #wifi.reset()
@@ -325,6 +386,7 @@ def main():
         except Exception as e:
             # This works to print a stack trace
             logger.error('Unexpected exception: %s', e)
+            graphic.update_errstatus(e)
             traceback.print_exception(e)
             # re-raise the error and hang the program
             raise
