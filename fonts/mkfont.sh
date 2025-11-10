@@ -19,8 +19,13 @@ OUT=$(basename ${SRC} .${ext})-${SIZE}.pcf
 [ -f ${SRC} ] || Usage
 [ ${SIZE} -gt 0 ] || Usage
 
-echo "otf2bdf -p ${SIZE} ${SRC} | bdftopcf > ${OUT}"
-otf2bdf -p ${SIZE} ${SRC} | bdftopcf > ${OUT}
+# (greatly) reduce file size by limiting the encoding
+OPTS="-r 72 -m iso8859.1"
+## grab encoding map file from:
+## https://github.com/jirutka/otf2bdf/blob/master/maps/iso8859.1
+
+echo "otf2bdf -p ${SIZE} ${OPTS} ${SRC} | bdftopcf > ${OUT}"
+otf2bdf -p ${SIZE} ${OPTS} ${SRC} | bdftopcf -o ${OUT}
 
 
 # Good fonts (use ftstring):
