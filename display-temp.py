@@ -26,6 +26,7 @@ import displayio
 #from adafruit_display_text.label import Label
 from adafruit_bitmap_font import bitmap_font
 from adafruit_display_text.bitmap_label import Label
+from adafruit_display_shapes.circle import Circle
 
 
 ## config knobs;
@@ -54,7 +55,7 @@ BUTTON_DOWN = board.IO0
 
 #CLOCK_FONT =  "fonts/FreeSans-60.pcf"
 CLOCK_FONT = 'fonts/NimbusSansNarrow-Regular-60.pcf'
-#LARGE_FONT =  "fonts/DejaVuSans-Bold24.pcf"
+#LARGE_FONT =  "fonts/DejaVuSans-Bold-24.pcf"
 #MEDIUM_FONT =  "fonts/FreeSans-40.pcf"
 MEDIUM_FONT = 'fonts/NimbusSansNarrow-Regular-40.pcf'
 SMALL_FONT = 'fonts/NimbusSansNarrow-Regular-8.pcf'
@@ -162,7 +163,8 @@ class graphic_display:
  
     def update_errstatus(self, e):
         if e is None:
-            self._status_str = ""
+            # leave the last exception string in there
+            #self._status_str = ""
             self._status_val = True
         else:
             self._lasterr = str(e)
@@ -170,6 +172,14 @@ class graphic_display:
         ## more stuff here...
         self.status_area.text = self._status_str
         self.logger.debug(f'update_errstatus() sets status_str={self._status_str}')
+
+        red = 0xff0000
+        green = 0x80ff00  # tweak to look better vs blue foreground
+        if self._status_val:
+            self.status_dot.fill = green
+        else:
+            self.status_dot.fill = red
+
 
     def get_display_group(self, display_width, display_height):
         if not self.display_group:
@@ -214,8 +224,11 @@ class graphic_display:
             self.status_area.x = 30
             self.status_area.y = 140
 
-            # self.status_dot = circle filled with red/green/etc ...
             bg_group.append(self.status_area)
+
+            # alternately, could use a Triangle if no .fill property for Circle
+            self.status_dot = Circle(45, 120, 4, fill=FGCOLOR)
+            bg_group.append(self.status_dot)
 
             # store our result here
             self.display_group = bg_group

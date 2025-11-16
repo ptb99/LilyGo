@@ -146,8 +146,12 @@ class App:
         surface, _ = self.fonts['SMALL'].render(
             get_status_string(),
             self.FGCOLOR)
-        self.display.blit(surface, (30, 140))
+        self.display.blit(surface, (35, 135))
         
+        #fgcolor = (255, 0, 0)  # red
+        fgcolor = (100, 255, 0)  # green
+        pg.draw.circle(self.display, fgcolor, (45,120), 4, width=0)
+
         # The pg.font TrueType case
         # surface = self.fonts['TEMP'].render(
         #     get_temp_string(),
