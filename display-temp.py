@@ -2,9 +2,12 @@
 ## CircuitPython code for a basic clock on TFT display
 ##
 
+import asyncio
 import time
 import board
 import busio
+import keypad
+
 import adafruit_logging as logging
 import traceback
 
@@ -45,27 +48,35 @@ PUBLISH_INTERVAL = 60
 ## UI buttons
 BUTTON_UP = board.IO14
 BUTTON_DOWN = board.IO0
-# button_a = digitalio.DigitalInOut(board.BUTTON_A)
-# button_a.direction = digitalio.Direction.INPUT
-# button_a.pull = digitalio.Pull.DOWN
-## is this micropython?
-# self.left = machine.Pin(0, Pin.IN)
-# self.right = machine.Pin(14, Pin.IN)
 #BACKLIGHT = Pin(38, Pin.OUT)
 
-#CLOCK_FONT =  "fonts/FreeSans-60.pcf"
 CLOCK_FONT = 'fonts/NimbusSansNarrow-Regular-60.pcf'
-#LARGE_FONT =  "fonts/DejaVuSans-Bold-24.pcf"
-#MEDIUM_FONT =  "fonts/FreeSans-40.pcf"
 MEDIUM_FONT = 'fonts/NimbusSansNarrow-Regular-40.pcf'
 SMALL_FONT = 'fonts/NimbusSansNarrow-Regular-8.pcf'
 
 FGCOLOR = 0x00ebf2              # cyan-ish
 BGCOLOR = 0x1e0028              # dark purple
+FG_COLORS = [0x00ebf2, 0x00d3d9, 0x00b0b4, 0x007478]
 
 # drawing parameters
 DISPLAY_WIDTH  = 320
 DISPLAY_HEIGHT = 170
+
+
+
+class ColorSelect():
+    def __init__(self):
+        # make a copy of list using [:]
+        self.color_wheel = FG_COLORS[:]
+
+    def get(self):
+        return self.color_wheel[0]
+
+    def rotate_left(self):
+        self.color_wheel = self.color_wheel[1:] + [self.color_wheel[0]]
+
+    def rotate_right(self):
+        self.color_wheel = [self.color_wheel[-1]] + self.color_wheel[0:-1]
 
 
 class temp_sensor_sht4x:
@@ -107,11 +118,12 @@ class temp_sensor_sht4x:
 
 class graphic_display:
     """Wrapper for CircuitPython displayio display"""
-    def __init__(self, *, am_pm=True, celsius=False):
+    def __init__(self, color_set, *, am_pm=True, celsius=False):
         self.logger = logging.getLogger('main')
         #self.logger.info('graphic_display() init called')
 
         self.display_group = None
+        self.color_set = color_set
 
         self.am_pm = am_pm
         self.celsius = celsius
@@ -180,6 +192,11 @@ class graphic_display:
         else:
             self.status_dot.fill = red
 
+    def update_colors(self):
+        fgcolor = self.color_set.get()
+        self.clock_area.color = fgcolor
+        self.temp_area.color = fgcolor
+        self.status_area.color = fgcolor
 
     def get_display_group(self, display_width, display_height):
         if not self.display_group:
@@ -317,8 +334,34 @@ class network_handles:
         return self.io
     
 
+async def handle_buttons(pin_up, pin_down, graphic):
+    """Handle buttons: up/down run through a set of FG colors (brightness)"""
+    logger = logging.getLogger('main')
+    color_set = graphic.color_set
+    with keypad.Keys(
+        (pin_down, pin_up), value_when_pressed=False, pull=True
+    ) as keys:
+        while True:
+            event = keys.events.get()
+            if event and event.pressed:
+                if event.key_number == 0:
+                    # rotate up
+                    color_set.rotate_left()
+                    fgcolor = color_set.get()
+                    logger.info(f'key UP - rotate left - color {fgcolor:x}')
+                    graphic.update_colors()
+                else:
+                    # key_number == 1
+                    color_set.rotate_right()
+                    fgcolor = color_set.get()
+                    logger.info(f'key DOWN - rotate left - color {fgcolor:x}')
+                    graphic.update_colors()
+            # Let another task run.
+            await asyncio.sleep(0)
+
+
 ## main program
-def main():
+async def main():
     logger = logging.getLogger('main')
     
     i2c = busio.I2C(board.STEMMA_SCL, board.STEMMA_SDA)  # use STEMMA/QT plug
@@ -334,11 +377,17 @@ def main():
     #af_io.on_message = recv_values
     af_io.connect()
 
-    graphic = graphic_display(am_pm=True, celsius=False)
+    color_set = ColorSelect()
+    graphic = graphic_display(color_set, am_pm=True, celsius=False)
 
     # display.show() is now replaced by setting .root_group
     display.root_group = graphic.get_display_group(DISPLAY_WIDTH,
                                                    DISPLAY_HEIGHT)
+
+    button_task = asyncio.create_task(
+        handle_buttons(BUTTON_UP, BUTTON_DOWN, graphic)
+    )
+
     i = 0
     next_publish = 0
 
@@ -376,7 +425,7 @@ def main():
             graphic.update_errstatus(e)
             # prob a timeout to NTP server, just try again
 
-        except MQTT.MQTTException as e:
+        except MQTT.MMQTTException as e:
             ## apparently, protocol exceptions happen fairly frequently
             logger.error('MQTT exception: %s', e)
             graphic.update_errstatus(e)
@@ -405,7 +454,10 @@ def main():
             raise
 
         # regardless of errors, wait the 10 sec before trying again
-        time.sleep(UPDATE_INTERVAL)
+        await asyncio.sleep(UPDATE_INTERVAL)
+
+    # Never actually reach this join as while loop is infinite
+    await asyncio.gather(button_task)
 
 
 ## actual exec here:
@@ -416,5 +468,6 @@ if __name__ == '__main__':
     else:
         logger.setLevel(logging.INFO)
 
-    main()
+    #main()
+    asyncio.run(main())
 
