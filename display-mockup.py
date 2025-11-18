@@ -29,6 +29,7 @@ def get_time_strings():
 def get_temp_string():
     """Wrapper function to get (dummy) temp sensor info in deg F"""
     temp = 74.159
+    #temp = 101.159
     tstring = f'{temp:.1f} °F'
     return tstring
 
@@ -84,7 +85,9 @@ class App:
         self.fonts['CLOCK'] = pg.freetype.Font('fonts/NimbusSansNarrow-Regular-60.pcf')
         #self.fonts['TEMP'] = pg.font.SysFont('freesans', 40)
         #self.fonts['TEMP'] = pg.freetype.Font('fonts/FreeSans-40.pcf')
-        self.fonts['TEMP'] = pg.freetype.Font('fonts/NimbusSansNarrow-Regular-40.pcf')
+        #self.fonts['TEMP'] = pg.freetype.Font('fonts/NimbusSansNarrow-Regular-40.pcf')
+        self.fonts['TEMP'] = pg.freetype.Font('fonts/NimbusSansNarrow-Regular-50.pcf')
+
         #self.fonts['SMALL'] = pg.font.SysFont('freesans', 16, bold=True)
         self.fonts['SMALL'] = pg.freetype.Font('fonts/NimbusSansNarrow-Regular-8.pcf')
         

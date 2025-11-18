@@ -51,7 +51,7 @@ BUTTON_DOWN = board.IO0
 #BACKLIGHT = Pin(38, Pin.OUT)
 
 CLOCK_FONT = 'fonts/NimbusSansNarrow-Regular-60.pcf'
-MEDIUM_FONT = 'fonts/NimbusSansNarrow-Regular-40.pcf'
+MEDIUM_FONT = 'fonts/NimbusSansNarrow-Regular-50.pcf'
 SMALL_FONT = 'fonts/NimbusSansNarrow-Regular-8.pcf'
 
 FGCOLOR = 0x00ebf2              # cyan-ish
