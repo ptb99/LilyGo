@@ -50,8 +50,8 @@ BUTTON_UP = board.IO14
 BUTTON_DOWN = board.IO0
 #BACKLIGHT = Pin(38, Pin.OUT)
 
-CLOCK_FONT = 'fonts/NimbusSansNarrow-Regular-60.pcf'
-MEDIUM_FONT = 'fonts/NimbusSansNarrow-Regular-50.pcf'
+CLOCK_FONT = 'fonts/NimbusSansNarrow-Regular-72.pcf'
+MEDIUM_FONT = 'fonts/NimbusSansNarrow-Regular-60.pcf'
 SMALL_FONT = 'fonts/NimbusSansNarrow-Regular-8.pcf'
 
 FGCOLOR = 0x00ebf2              # cyan-ish
@@ -229,8 +229,8 @@ class graphic_display:
             self.temp_area = Label(self.temp_font,
                                    text=self._temp_str,
                                    color=FGCOLOR)
-            self.temp_area.x = 150
-            self.temp_area.y = 130
+            self.temp_area.x = 140
+            self.temp_area.y = 120
 
             bg_group.append(self.temp_area)
 

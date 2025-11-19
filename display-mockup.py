@@ -82,11 +82,12 @@ class App:
         self.fonts = {}
         #self.fonts['CLOCK'] = pg.font.SysFont('freesans', 60)
         #self.fonts['CLOCK'] = pg.freetype.Font('fonts/FreeSans-60.pcf')
-        self.fonts['CLOCK'] = pg.freetype.Font('fonts/NimbusSansNarrow-Regular-60.pcf')
+        #self.fonts['CLOCK'] = pg.freetype.Font('fonts/NimbusSansNarrow-Regular-60.pcf')
+        self.fonts['CLOCK'] = pg.freetype.Font('fonts/NimbusSansNarrow-Regular-72.pcf')
         #self.fonts['TEMP'] = pg.font.SysFont('freesans', 40)
         #self.fonts['TEMP'] = pg.freetype.Font('fonts/FreeSans-40.pcf')
         #self.fonts['TEMP'] = pg.freetype.Font('fonts/NimbusSansNarrow-Regular-40.pcf')
-        self.fonts['TEMP'] = pg.freetype.Font('fonts/NimbusSansNarrow-Regular-50.pcf')
+        self.fonts['TEMP'] = pg.freetype.Font('fonts/NimbusSansNarrow-Regular-60.pcf')
 
         #self.fonts['SMALL'] = pg.font.SysFont('freesans', 16, bold=True)
         self.fonts['SMALL'] = pg.freetype.Font('fonts/NimbusSansNarrow-Regular-8.pcf')
@@ -144,7 +145,7 @@ class App:
         surface, _ = self.fonts['TEMP'].render(
             get_temp_string(),
             self.FGCOLOR)
-        self.display.blit(surface, (150, 110))
+        self.display.blit(surface, (140, 100))
 
         surface, _ = self.fonts['SMALL'].render(
             get_status_string(),
