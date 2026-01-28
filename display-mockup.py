@@ -52,6 +52,8 @@ class App:
     BGCOLOR = (30, 0, 40)    # dark purple
     #FGCOLOR = (178, 235, 242)  # light blue
     FGCOLOR = (0, 235, 242)  # light blue
+    # These are 47%, 40%, 30%, 20% light/dark:
+    #FG_COLORS = [0x00ebf2, 0x00c5cc, 0x009499, 0x006366]
     UPDATE_INTERVAL = 5
 
     def __init__(self):

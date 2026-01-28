@@ -179,7 +179,7 @@ class graphic_display:
             #self._status_str = ""
             self._status_val = True
         else:
-            self._lasterr = str(e)
+            self._status_str = str(e)
             self._status_val = False
         ## more stuff here...
         self.status_area.text = self._status_str
