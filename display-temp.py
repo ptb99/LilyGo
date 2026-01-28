@@ -52,7 +52,7 @@ BUTTON_DOWN = board.IO0
 
 CLOCK_FONT = 'fonts/NimbusSansNarrow-Regular-72.pcf'
 MEDIUM_FONT = 'fonts/NimbusSansNarrow-Regular-60.pcf'
-SMALL_FONT = 'fonts/NimbusSansNarrow-Regular-8.pcf'
+SMALL_FONT = 'fonts/NimbusSansNarrow-Regular-10.pcf'
 
 FGCOLOR = 0x00ebf2              # cyan-ish
 BGCOLOR = 0x1e0028              # dark purple
@@ -418,31 +418,15 @@ async def main():
 
             display.refresh()
 
-        except OSError as e:
-            # NTP error
-            logger.error('OSError: %s', e)
-            traceback.print_exception(e)
+        except (OSError, MQTT.MMQTTException, AdafruitIO_MQTTError) as e:
+            ## These seem to happen frequently
+            logger.error('Network exception: %s', e)
             graphic.update_errstatus(e)
-            # prob a timeout to NTP server, just try again
-
-        except MQTT.MMQTTException as e:
-            ## apparently, protocol exceptions happen fairly frequently
-            logger.error('MQTT exception: %s', e)
-            graphic.update_errstatus(e)
+            ## swallow this exception and try another round at main()
             # Maybe need these?
             # if not wifi.radio.connected:
             #     wifi.reset()
             #     wifi.connect()
-            af_io.reconnect()
-
-        except AdafruitIO_MQTTError as e:
-            ## apparently, protocol exceptions happen fairly frequently
-            logger.error('MQTT exception: %s', e)
-            graphic.update_errstatus(e)
-            ## swallow this exception and try another round at main()
-            # Maybe need these?
-            #wifi.reset()
-            #wifi.connect()
             af_io.reconnect()
 
         except Exception as e:
